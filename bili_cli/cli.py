@@ -288,32 +288,35 @@ def video(bv_or_url: str, subtitle: bool, comments: bool, ai: bool, related: boo
 # ===== User =====
 
 
+def _resolve_uid(uid_or_name: str, cred=None) -> int:
+    """Resolve a UID or username to a numeric UID."""
+    from . import client
+
+    if uid_or_name.isdigit():
+        return int(uid_or_name)
+
+    results = _run(client.search_user(uid_or_name))
+    if not results:
+        console.print(f"[red]❌ 未找到用户: {uid_or_name}[/red]")
+        sys.exit(1)
+    uid = results[0]["mid"]
+    console.print(f"[dim]🔍 匹配到: {results[0].get('uname', '')} (UID: {uid})[/dim]\n")
+    return uid
+
+
 @cli.command()
 @click.argument("uid_or_name")
-@click.option("--max", "-n", "count", default=10, help="显示的视频数量 (默认 10)。")
 @click.option("--json", "as_json", is_flag=True, help="输出原始 JSON。")
-def user(uid_or_name: str, count: int, as_json: bool):
-    """查看 UP 主信息和最新视频。
+def user(uid_or_name: str, as_json: bool):
+    """Get user profile.
 
     UID_OR_NAME 可以是 UID（纯数字）或用户名（搜索第一个匹配）。
     """
     from . import client
 
     cred = get_credential()
+    uid = _resolve_uid(uid_or_name, cred)
 
-    # Resolve UID
-    if uid_or_name.isdigit():
-        uid = int(uid_or_name)
-    else:
-        # Search by name
-        results = _run(client.search_user(uid_or_name))
-        if not results:
-            console.print(f"[red]❌ 未找到用户: {uid_or_name}[/red]")
-            sys.exit(1)
-        uid = results[0]["mid"]
-        console.print(f"[dim]🔍 匹配到: {results[0].get('uname', '')} (UID: {uid})[/dim]\n")
-
-    # Fetch user info
     try:
         info = _run(client.get_user_info(uid, credential=cred))
         relation = _run(client.get_user_relation_info(uid, credential=cred))
@@ -322,15 +325,12 @@ def user(uid_or_name: str, count: int, as_json: bool):
         sys.exit(1)
 
     if as_json:
-        videos = _run(client.get_user_videos(uid, count=count, credential=cred))
-        output = {"user_info": info, "relation": relation, "videos": videos}
-        click.echo(json.dumps(output, ensure_ascii=False, indent=2))
+        click.echo(json.dumps({"user_info": info, "relation": relation}, ensure_ascii=False, indent=2))
         return
 
     follower = relation.get("follower", 0)
     following = relation.get("following", 0)
 
-    # Display user info
     console.print(Panel(
         f"👤 [bold]{info.get('name', '')}[/bold]  (UID: {uid})\n"
         f"⭐ Level {info.get('level', '?')}  |  "
@@ -342,35 +342,55 @@ def user(uid_or_name: str, count: int, as_json: bool):
 
     sign = info.get("sign", "").strip()
     if sign:
-        console.print(f"[dim]{sign}[/dim]\n")
+        console.print(f"[dim]{sign}[/dim]")
 
-    # Fetch and display recent videos
+
+@cli.command(name="user-videos")
+@click.argument("uid_or_name")
+@click.option("--max", "-n", "count", default=10, help="显示的视频数量 (默认 10)。")
+@click.option("--json", "as_json", is_flag=True, help="输出原始 JSON。")
+def user_videos(uid_or_name: str, count: int, as_json: bool):
+    """List a user's published videos.
+
+    UID_OR_NAME 可以是 UID（纯数字）或用户名（搜索第一个匹配）。
+    """
+    from . import client
+
+    cred = get_credential()
+    uid = _resolve_uid(uid_or_name, cred)
+
     videos = _run(client.get_user_videos(uid, count=count, credential=cred))
 
-    if videos:
-        table = Table(title=f"最新 {len(videos)} 个视频", border_style="blue")
-        table.add_column("#", style="dim", width=4)
-        table.add_column("BV号", style="cyan", width=14)
-        table.add_column("标题", max_width=40)
-        table.add_column("时长", width=8)
-        table.add_column("播放", width=8, justify="right")
+    if as_json:
+        click.echo(json.dumps(videos, ensure_ascii=False, indent=2))
+        return
 
-        for i, v in enumerate(videos, 1):
-            # length from get_videos() is "MM:SS" string, not seconds
-            length_raw = v.get("length", "0")
-            if isinstance(length_raw, str) and ":" in length_raw:
-                length_str = length_raw  # already formatted
-            else:
-                length_str = _format_duration(int(length_raw) if length_raw else 0)
-            table.add_row(
-                str(i),
-                v.get("bvid", ""),
-                v.get("title", "")[:40],
-                length_str,
-                _format_count(v.get("play", 0)),
-            )
+    if not videos:
+        console.print("[yellow]该用户暂无视频[/yellow]")
+        return
 
-        console.print(table)
+    table = Table(title=f"最新 {len(videos)} 个视频", border_style="blue")
+    table.add_column("#", style="dim", width=4)
+    table.add_column("BV号", style="cyan", width=14)
+    table.add_column("标题", max_width=40)
+    table.add_column("时长", width=8)
+    table.add_column("播放", width=8, justify="right")
+
+    for i, v in enumerate(videos, 1):
+        length_raw = v.get("length", "0")
+        if isinstance(length_raw, str) and ":" in length_raw:
+            length_str = length_raw
+        else:
+            length_str = _format_duration(int(length_raw) if length_raw else 0)
+        table.add_row(
+            str(i),
+            v.get("bvid", ""),
+            v.get("title", "")[:40],
+            length_str,
+            _format_count(v.get("play", 0)),
+        )
+
+    console.print(table)
 
 
 # ===== Search =====
@@ -781,6 +801,80 @@ def feed(as_json: bool):
         if comment_count or like_count:
             console.print(f"  [dim]👍 {like_count}  💬 {comment_count}[/dim]")
         console.print()
+
+
+# ===== Interactions =====
+
+
+def _require_login():
+    """Helper to require login, returns credential or exits."""
+    cred = get_credential()
+    if not cred:
+        console.print("[yellow]⚠️  需要登录。使用 [bold]bili login[/bold] 登录。[/yellow]")
+        sys.exit(1)
+    return cred
+
+
+@cli.command()
+@click.argument("bv_or_url")
+@click.option("--undo", is_flag=True, help="取消点赞。")
+def like(bv_or_url: str, undo: bool):
+    """Like or unlike a video."""
+    from . import client
+
+    cred = _require_login()
+    bvid = client.extract_bvid(bv_or_url)
+
+    try:
+        _run(client.like_video(bvid, credential=cred, undo=undo))
+        if undo:
+            console.print(f"[yellow]👎 已取消点赞: {bvid}[/yellow]")
+        else:
+            console.print(f"[green]👍 已点赞: {bvid}[/green]")
+    except Exception as e:
+        console.print(f"[red]❌ 操作失败: {e}[/red]")
+
+
+@cli.command()
+@click.argument("bv_or_url")
+@click.option("--num", "-n", default=1, type=click.Choice(["1", "2"]), help="投币数量 (1 或 2)。")
+def coin(bv_or_url: str, num: str):
+    """Give coins to a video."""
+    from . import client
+
+    cred = _require_login()
+    bvid = client.extract_bvid(bv_or_url)
+
+    try:
+        _run(client.coin_video(bvid, credential=cred, num=int(num)))
+        console.print(f"[green]🪙 已投 {num} 枚硬币: {bvid}[/green]")
+    except Exception as e:
+        console.print(f"[red]❌ 投币失败: {e}[/red]")
+
+
+@cli.command()
+@click.argument("bv_or_url")
+def triple(bv_or_url: str):
+    """Triple a video (like + coin + favorite). 一键三连！"""
+    from . import client
+
+    cred = _require_login()
+    bvid = client.extract_bvid(bv_or_url)
+
+    try:
+        result = _run(client.triple_video(bvid, credential=cred))
+        parts = []
+        if result.get("like"):
+            parts.append("👍 点赞")
+        if result.get("coin"):
+            parts.append("🪙 投币")
+        if result.get("multiply") or result.get("fav"):
+            parts.append("⭐ 收藏")
+        console.print(f"[green]🎉 一键三连成功: {bvid}[/green]")
+        if parts:
+            console.print(f"[dim]  {' + '.join(parts)}[/dim]")
+    except Exception as e:
+        console.print(f"[red]❌ 三连失败: {e}[/red]")
 
 
 if __name__ == "__main__":

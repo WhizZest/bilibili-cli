@@ -318,3 +318,26 @@ async def get_dynamic_feed(
     uid = me["mid"]
     u = user.User(uid=uid, credential=credential)
     return await u.get_dynamics_new(offset=offset)
+
+
+# ---------------------------------------------------------------------------
+# Interactions (like, coin, triple)
+# ---------------------------------------------------------------------------
+
+
+async def like_video(bvid: str, credential: Credential, undo: bool = False) -> dict[str, Any]:
+    """Like or unlike a video."""
+    v = video.Video(bvid=bvid, credential=credential)
+    return await v.like(status=not undo)
+
+
+async def coin_video(bvid: str, credential: Credential, num: int = 1) -> dict[str, Any]:
+    """Give coins to a video (1 or 2)."""
+    v = video.Video(bvid=bvid, credential=credential)
+    return await v.pay_coin(num=num)
+
+
+async def triple_video(bvid: str, credential: Credential) -> dict[str, Any]:
+    """Triple (like + coin + favorite) a video."""
+    v = video.Video(bvid=bvid, credential=credential)
+    return await v.triple()
