@@ -153,19 +153,21 @@ def test_audio_no_split_downloads_full(runner, mock_video_info):
 
 
 def test_audio_split_mode(runner, mock_video_info):
-    with patch("bili_cli.commands.common.get_credential", return_value=None), \
-         patch("bili_cli.client.extract_bvid", return_value="BV1test12345"), \
-         patch("bili_cli.client.get_video_info", new_callable=AsyncMock, return_value=mock_video_info), \
-         patch("bili_cli.client.get_audio_url", new_callable=AsyncMock, return_value="https://example.com/audio.m4s"), \
-         patch("bili_cli.client.download_audio", new_callable=AsyncMock, return_value=5 * 1024 * 1024), \
-         patch("bili_cli.client.split_audio", return_value=["/tmp/seg_000.wav", "/tmp/seg_001.wav"]) as mock_split, \
-         patch("os.path.getsize", return_value=960000), \
-         patch("os.path.exists", return_value=True), \
-         patch("os.unlink"):
-        result = runner.invoke(cli, ["audio", "BV1test12345", "--segment", "25"])
-        assert result.exit_code == 0
-        assert "切分完成: 2 段" in result.output
-        mock_split.assert_called_once()
+    with tempfile.TemporaryDirectory() as tmpdir:
+        seg_paths = [os.path.join(tmpdir, "seg_000.wav"), os.path.join(tmpdir, "seg_001.wav")]
+        with patch("bili_cli.commands.common.get_credential", return_value=None), \
+             patch("bili_cli.client.extract_bvid", return_value="BV1test12345"), \
+             patch("bili_cli.client.get_video_info", new_callable=AsyncMock, return_value=mock_video_info), \
+             patch("bili_cli.client.get_audio_url", new_callable=AsyncMock, return_value="https://example.com/audio.m4s"), \
+             patch("bili_cli.client.download_audio", new_callable=AsyncMock, return_value=5 * 1024 * 1024), \
+             patch("bili_cli.client.split_audio", return_value=seg_paths) as mock_split, \
+             patch("bili_cli.commands.audio.os.path.getsize", return_value=960000), \
+             patch("bili_cli.commands.audio.os.path.exists", return_value=True), \
+             patch("bili_cli.commands.audio.os.unlink"):
+            result = runner.invoke(cli, ["audio", "BV1test12345", "--segment", "25", "-o", tmpdir])
+            assert result.exit_code == 0
+            assert "切分完成: 2 段" in result.output
+            mock_split.assert_called_once()
 
 
 def test_audio_api_error_returns_nonzero(runner):
