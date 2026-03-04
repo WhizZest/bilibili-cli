@@ -88,6 +88,27 @@ def logout():
 @cli.command()
 def status():
     """检查登录状态。"""
+    cred = get_credential()
+    if not cred:
+        console.print("[yellow]⚠️  未登录。使用 [bold]bili login[/bold] 登录。[/yellow]")
+        return
+
+    from . import client
+
+    try:
+        info = _run(client.get_self_info(cred))
+        name = info.get("name", "unknown")
+        uid = info.get("mid", "unknown")
+        console.print(f"[green]✅ 已登录：[bold]{name}[/bold]  (UID: {uid})[/green]")
+    except Exception as e:
+        console.print(f"[red]❌ 凭证可能已过期: {e}[/red]")
+        console.print("[yellow]请使用 [bold]bili login[/bold] 重新登录。[/yellow]")
+
+
+@cli.command()
+@click.option("--json", "as_json", is_flag=True, help="输出原始 JSON。")
+def whoami(as_json: bool):
+    """查看当前登录用户的详细信息。"""
     from . import client
 
     cred = get_credential()
@@ -99,6 +120,10 @@ def status():
         info = _run(client.get_self_info(cred))
         uid = info.get("mid", "unknown")
         relation = _run(client.get_user_relation_info(uid, credential=cred))
+
+        if as_json:
+            click.echo(json.dumps({"info": info, "relation": relation}, ensure_ascii=False, indent=2))
+            return
 
         name = info.get("name", "unknown")
         level = info.get("level", "?")
@@ -125,7 +150,7 @@ def status():
 
         console.print(Panel(
             "\n".join(lines),
-            title="登录状态",
+            title="个人信息",
             border_style="green",
         ))
     except Exception as e:

@@ -28,21 +28,46 @@ REQUIRED_COOKIES = {"SESSDATA"}
 
 
 def get_credential() -> Credential | None:
-    """Try all auth methods in order. Returns Credential or None."""
+    """Try all auth methods in order. Returns validated Credential or None."""
     # 1. Saved credential file
     cred = _load_saved_credential()
     if cred:
-        logger.info("Loaded saved credential from %s", CREDENTIAL_FILE)
-        return cred
+        if _validate_credential(cred):
+            logger.info("Loaded valid credential from %s", CREDENTIAL_FILE)
+            return cred
+        else:
+            logger.warning("Saved credential is expired, clearing")
+            clear_credential()
 
     # 2. Browser cookie extraction
     cred = _extract_browser_credential()
     if cred:
-        logger.info("Extracted credential from local browser")
-        save_credential(cred)
-        return cred
+        if _validate_credential(cred):
+            logger.info("Extracted valid credential from local browser")
+            save_credential(cred)
+            return cred
+        else:
+            logger.warning("Browser cookies are expired/invalid")
 
     return None
+
+
+def _validate_credential(cred: Credential) -> bool:
+    """Check if a credential is still valid by calling the API."""
+    import asyncio
+    from bilibili_api import user
+
+    async def _check():
+        try:
+            await user.get_self_info(cred)
+            return True
+        except Exception:
+            return False
+
+    try:
+        return asyncio.run(_check())
+    except Exception:
+        return False
 
 
 def _load_saved_credential() -> Credential | None:
