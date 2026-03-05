@@ -428,6 +428,25 @@ async def get_followings(
     return await _call_api("获取关注列表", u.get_followings(pn=pn, ps=ps))
 
 
+async def modify_user_relation(
+    uid: int,
+    relation: user.RelationType,
+    credential: Credential,
+) -> dict[str, Any]:
+    """Modify relation to a user (subscribe/unsubscribe/block...)."""
+    u = user.User(uid=uid, credential=credential)
+    return await _call_api("修改用户关系", u.modify_relation(relation=relation))
+
+
+async def unfollow_user(uid: int, credential: Credential) -> dict[str, Any]:
+    """Unfollow a user by UID."""
+    return await modify_user_relation(
+        uid=uid,
+        relation=user.RelationType.UNSUBSCRIBE,
+        credential=credential,
+    )
+
+
 async def get_watch_history(
     page: int = 1, count: int = 30, credential: Credential | None = None
 ) -> dict[str, Any]:
@@ -489,6 +508,38 @@ async def get_dynamic_feed(
             offset=parsed_offset,
         ),
     )
+
+
+async def post_text_dynamic(text: str, credential: Credential) -> dict[str, Any]:
+    """Publish a plain-text dynamic."""
+    content = text.strip()
+    if not content:
+        raise BiliError("发布动态: 文本不能为空")
+    info = dynamic.BuildDynamic.empty().add_text(content)
+    return await _call_api(
+        "发布动态",
+        dynamic.send_dynamic(info=info, credential=credential),
+    )
+
+
+async def get_user_dynamics(
+    uid: int,
+    offset: int = 0,
+    need_top: bool = False,
+    credential: Credential | None = None,
+) -> dict[str, Any]:
+    """Fetch a user's own dynamics timeline."""
+    u = user.User(uid=uid, credential=credential)
+    return await _call_api(
+        "获取用户动态",
+        u.get_dynamics(offset=offset, need_top=need_top),
+    )
+
+
+async def delete_dynamic(dynamic_id: int, credential: Credential) -> dict[str, Any]:
+    """Delete a dynamic by dynamic id."""
+    d = dynamic.Dynamic(dynamic_id=dynamic_id, credential=credential)
+    return await _call_api("删除动态", d.delete())
 
 
 # ---------------------------------------------------------------------------

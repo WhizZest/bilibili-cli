@@ -550,6 +550,68 @@ def test_feed_forwards_offset(runner):
         mock_feed.assert_awaited_once_with(offset="123", credential=mock_cred)
 
 
+def test_my_dynamics_success(runner):
+    mock_cred = MagicMock()
+    data = {
+        "cards": [
+            {
+                "desc": {"dynamic_id": 123, "timestamp": 1700000000},
+                "card": json.dumps({"item": {"content": "测试动态内容"}}),
+            }
+        ],
+        "next_offset": 456,
+    }
+    with patch("bili_cli.commands.common.get_credential", return_value=mock_cred), \
+         patch("bili_cli.client.get_self_info", new_callable=AsyncMock, return_value={"mid": 946974}), \
+         patch("bili_cli.client.get_user_dynamics", new_callable=AsyncMock, return_value=data):
+        result = runner.invoke(cli, ["my-dynamics", "--max", "1"])
+        assert result.exit_code == 0
+        assert "123" in result.output
+        assert "测试动态内容" in result.output
+        assert "my-dynamics --offset 456" in result.output
+
+
+def test_my_dynamics_forwards_options(runner):
+    mock_cred = MagicMock()
+    with patch("bili_cli.commands.common.get_credential", return_value=mock_cred), \
+         patch("bili_cli.client.get_self_info", new_callable=AsyncMock, return_value={"mid": 946974}), \
+         patch("bili_cli.client.get_user_dynamics", new_callable=AsyncMock, return_value={"cards": []}) as mock_get:
+        result = runner.invoke(cli, ["my-dynamics", "--offset", "99", "--top"])
+        assert result.exit_code == 0
+        mock_get.assert_awaited_once_with(uid=946974, offset=99, need_top=True, credential=mock_cred)
+
+
+def test_dynamic_post_text_success(runner):
+    mock_cred = MagicMock()
+    with patch("bili_cli.commands.common.get_credential", return_value=mock_cred), \
+         patch("bili_cli.client.post_text_dynamic", new_callable=AsyncMock, return_value={"dynamic_id": 1001}) as mock_post:
+        result = runner.invoke(cli, ["dynamic-post", "hello dynamic"])
+        assert result.exit_code == 0
+        assert "1001" in result.output
+        mock_post.assert_awaited_once_with("hello dynamic", credential=mock_cred)
+
+
+def test_dynamic_post_from_file_success(runner):
+    mock_cred = MagicMock()
+    with runner.isolated_filesystem():
+        with open("dyn.txt", "w", encoding="utf-8") as f:
+            f.write("from file dynamic")
+        with patch("bili_cli.commands.common.get_credential", return_value=mock_cred), \
+             patch("bili_cli.client.post_text_dynamic", new_callable=AsyncMock, return_value={}) as mock_post:
+            result = runner.invoke(cli, ["dynamic-post", "--from-file", "dyn.txt"])
+            assert result.exit_code == 0
+            mock_post.assert_awaited_once_with("from file dynamic", credential=mock_cred)
+
+
+def test_dynamic_delete_yes_calls_client(runner):
+    mock_cred = MagicMock()
+    with patch("bili_cli.commands.common.get_credential", return_value=mock_cred), \
+         patch("bili_cli.client.delete_dynamic", new_callable=AsyncMock, return_value={}) as mock_delete:
+        result = runner.invoke(cli, ["dynamic-delete", "123", "--yes"])
+        assert result.exit_code == 0
+        mock_delete.assert_awaited_once_with(dynamic_id=123, credential=mock_cred)
+
+
 # ===== Interactions =====
 
 
@@ -572,6 +634,16 @@ def test_triple_requires_login(runner):
         result = runner.invoke(cli, ["triple", "BV1test"])
         assert result.exit_code != 0
         assert "需要登录" in result.output
+
+
+def test_unfollow_yes_calls_client(runner):
+    mock_cred = MagicMock()
+    mock_cred.bili_jct = "valid_jct"
+    with patch("bili_cli.commands.common.get_credential", return_value=mock_cred), \
+         patch("bili_cli.client.unfollow_user", new_callable=AsyncMock, return_value={}) as mock_unfollow:
+        result = runner.invoke(cli, ["unfollow", "946974", "--yes"])
+        assert result.exit_code == 0
+        mock_unfollow.assert_awaited_once_with(uid=946974, credential=mock_cred)
 
 
 def test_coin_invalid_num(runner):

@@ -1,6 +1,6 @@
 """Tests for client.py — mock bilibili-api internals."""
 
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from bilibili_api.exceptions import CredentialNoSessdataException, NetworkException
@@ -323,6 +323,57 @@ async def test_get_dynamic_feed_parses_offset_string(mock_credential):
 async def test_get_dynamic_feed_invalid_offset_raises(mock_credential):
     with pytest.raises(BiliError, match="offset 非法"):
         await client.get_dynamic_feed(offset="not-int", credential=mock_credential)
+
+
+@pytest.mark.asyncio
+async def test_post_text_dynamic_success(mock_credential):
+    fake_builder = MagicMock()
+    fake_builder.add_text.return_value = fake_builder
+    with patch("bili_cli.client.dynamic.BuildDynamic.empty", return_value=fake_builder) as mock_empty, \
+         patch("bili_cli.client.dynamic.send_dynamic", new_callable=AsyncMock, return_value={"dynamic_id": 1}) as mock_send:
+        result = await client.post_text_dynamic(" hello ", credential=mock_credential)
+        assert result["dynamic_id"] == 1
+        mock_empty.assert_called_once_with()
+        fake_builder.add_text.assert_called_once_with("hello")
+        mock_send.assert_awaited_once_with(info=fake_builder, credential=mock_credential)
+
+
+@pytest.mark.asyncio
+async def test_post_text_dynamic_rejects_empty_text(mock_credential):
+    with pytest.raises(BiliError, match="文本不能为空"):
+        await client.post_text_dynamic("   ", credential=mock_credential)
+
+
+@pytest.mark.asyncio
+async def test_get_user_dynamics_calls_user_api(mock_credential):
+    mock_data = {"cards": [{"desc": {"dynamic_id": 1}}]}
+    with patch("bili_cli.client.user.User") as MockUser:
+        MockUser.return_value.get_dynamics = AsyncMock(return_value=mock_data)
+        result = await client.get_user_dynamics(uid=123, offset=10, need_top=True, credential=mock_credential)
+        assert result == mock_data
+        MockUser.return_value.get_dynamics.assert_awaited_once_with(offset=10, need_top=True)
+
+
+@pytest.mark.asyncio
+async def test_delete_dynamic_calls_dynamic_delete(mock_credential):
+    with patch("bili_cli.client.dynamic.Dynamic") as MockDynamic:
+        MockDynamic.return_value.delete = AsyncMock(return_value={"ok": 1})
+        result = await client.delete_dynamic(dynamic_id=1001, credential=mock_credential)
+        assert result["ok"] == 1
+        MockDynamic.assert_called_once_with(dynamic_id=1001, credential=mock_credential)
+        MockDynamic.return_value.delete.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_unfollow_user_uses_unsubscribe_relation(mock_credential):
+    with patch("bili_cli.client.modify_user_relation", new_callable=AsyncMock, return_value={"code": 0}) as mock_modify:
+        result = await client.unfollow_user(uid=123, credential=mock_credential)
+        assert result["code"] == 0
+        mock_modify.assert_awaited_once_with(
+            uid=123,
+            relation=client.user.RelationType.UNSUBSCRIBE,
+            credential=mock_credential,
+        )
 
 
 @pytest.mark.asyncio

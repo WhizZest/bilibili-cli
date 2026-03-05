@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import json
+
 import click
 
 from . import common
@@ -58,3 +60,31 @@ def triple(bv_or_url: str):
     common.console.print(f"[green]🎉 一键三连成功: {bvid}[/green]")
     if parts:
         common.console.print(f"[dim]  {' + '.join(parts)}[/dim]")
+
+
+@click.command()
+@click.argument("uid", type=int)
+@click.option("--yes", is_flag=True, help="跳过确认，直接取消关注。")
+@click.option("--json", "as_json", is_flag=True, help="输出原始 JSON。")
+def unfollow(uid: int, yes: bool, as_json: bool):
+    """取消关注某个 UP（按 UID）。"""
+    from .. import client
+
+    cred = common.require_login(require_write=True)
+
+    if not yes:
+        confirmed = click.confirm(f"确认取消关注 UID={uid} 吗？", default=False)
+        if not confirmed:
+            common.console.print("[yellow]已取消操作[/yellow]")
+            return
+
+    data = common.run_or_exit(
+        client.unfollow_user(uid=uid, credential=cred),
+        "取消关注失败",
+    )
+
+    if as_json:
+        click.echo(json.dumps(data, ensure_ascii=False, indent=2))
+        return
+
+    common.console.print(f"[green]✅ 已取消关注 UID={uid}[/green]")

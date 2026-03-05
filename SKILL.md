@@ -72,6 +72,9 @@ bili hot                       # Trending/popular videos
 bili hot --max 10               # Limit results
 bili rank                      # Site-wide ranking
 bili feed                      # Dynamic timeline (requires login)
+bili my-dynamics               # My posted dynamics (requires login)
+bili dynamic-post "hello"      # Publish text dynamic (requires write credential)
+bili dynamic-delete 123456789  # Delete one dynamic (requires write credential)
 ```
 
 ### Collections (require login)
@@ -102,6 +105,7 @@ bili like BV1ABcsztEcY --undo  # Unlike
 bili coin BV1ABcsztEcY         # Give 1 coin
 bili coin BV1ABcsztEcY -n 2    # Give 2 coins
 bili triple BV1ABcsztEcY       # 一键三连 (like + coin + favorite)
+bili unfollow 946974           # Unfollow by UID
 ```
 
 ### Account

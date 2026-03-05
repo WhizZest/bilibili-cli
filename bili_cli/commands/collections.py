@@ -4,11 +4,91 @@ from __future__ import annotations
 
 import json
 from datetime import datetime
+from pathlib import Path
+from typing import Any
 
 import click
 from rich.table import Table
 
 from . import common
+
+
+def _decode_json(value: object) -> dict[str, Any]:
+    if isinstance(value, dict):
+        return value
+    if not isinstance(value, str):
+        return {}
+    try:
+        parsed = json.loads(value)
+    except json.JSONDecodeError:
+        return {}
+    return parsed if isinstance(parsed, dict) else {}
+
+
+def _extract_dynamic_id(item: dict[str, Any]) -> int:
+    desc = item.get("desc", {}) if isinstance(item, dict) else {}
+    candidates = [
+        desc.get("dynamic_id"),
+        desc.get("dynamic_id_str"),
+        item.get("id_str"),
+        item.get("id"),
+    ]
+    for candidate in candidates:
+        if isinstance(candidate, int):
+            return candidate
+        if isinstance(candidate, str):
+            try:
+                return int(candidate)
+            except ValueError:
+                continue
+    return 0
+
+
+def _extract_dynamic_timestamp(item: dict[str, Any]) -> int:
+    desc = item.get("desc", {}) if isinstance(item, dict) else {}
+    ts = desc.get("timestamp")
+    if isinstance(ts, int):
+        return ts
+    if isinstance(ts, str):
+        try:
+            return int(ts)
+        except ValueError:
+            return 0
+    return 0
+
+
+def _extract_dynamic_text(item: dict[str, Any]) -> str:
+    parts: list[str] = []
+
+    modules = item.get("modules", {}) if isinstance(item, dict) else {}
+    if isinstance(modules, dict):
+        dynamic_mod = modules.get("module_dynamic", {})
+        if isinstance(dynamic_mod, dict):
+            desc = dynamic_mod.get("desc", {})
+            if isinstance(desc, dict) and isinstance(desc.get("text"), str):
+                parts.append(desc["text"])
+
+    card = _decode_json(item.get("card"))
+    for key in ("title", "description", "dynamic", "summary"):
+        value = card.get(key)
+        if isinstance(value, str) and value.strip():
+            parts.append(value.strip())
+    card_item = card.get("item")
+    if isinstance(card_item, dict):
+        for key in ("title", "description", "content"):
+            value = card_item.get(key)
+            if isinstance(value, str) and value.strip():
+                parts.append(value.strip())
+
+    if not parts:
+        desc = item.get("desc", {}) if isinstance(item, dict) else {}
+        if isinstance(desc, dict):
+            for key in ("description", "dynamic_id_str"):
+                value = desc.get(key)
+                if isinstance(value, str) and value.strip():
+                    parts.append(value.strip())
+
+    return " ".join(parts).strip()
 
 
 @click.command()
@@ -290,3 +370,122 @@ def feed(offset: str, as_json: bool):
     next_offset = data.get("next_offset") or data.get("offset")
     if next_offset not in ("", None):
         common.console.print(f"[dim]下一页：bili feed --offset {next_offset}[/dim]")
+
+
+@click.command(name="my-dynamics")
+@click.option("--offset", default=0, type=click.IntRange(0), help="分页偏移量；默认 0。")
+@click.option("--top/--no-top", "need_top", default=False, help="是否包含置顶动态。")
+@click.option("--max", "-n", "count", default=20, type=click.IntRange(1, 50), help="显示条数 (1-50)。")
+@click.option("--json", "as_json", is_flag=True, help="输出原始 JSON。")
+def my_dynamics(offset: int, need_top: bool, count: int, as_json: bool):
+    """查看我发布的动态。"""
+    from .. import client
+
+    cred = common.require_login()
+
+    me = common.run_or_exit(client.get_self_info(cred), "获取我的动态失败")
+    uid = me.get("mid")
+    if not isinstance(uid, int):
+        common.exit_error("获取我的动态失败: 当前用户信息缺少 mid")
+
+    data = common.run_or_exit(
+        client.get_user_dynamics(uid=uid, offset=offset, need_top=need_top, credential=cred),
+        "获取我的动态失败",
+    )
+
+    if as_json:
+        click.echo(json.dumps(data, ensure_ascii=False, indent=2))
+        return
+
+    cards = data.get("cards") or []
+    if not isinstance(cards, list) or not cards:
+        common.console.print("[yellow]暂无我发布的动态[/yellow]")
+        return
+
+    table = Table(title=f"📝 我的动态  (offset={offset})", border_style="blue")
+    table.add_column("#", style="dim", width=4)
+    table.add_column("动态ID", style="cyan", width=16)
+    table.add_column("发布时间", width=12)
+    table.add_column("内容", max_width=60)
+
+    for idx, card in enumerate(cards[:count], 1):
+        if not isinstance(card, dict):
+            continue
+        dynamic_id = _extract_dynamic_id(card)
+        ts = _extract_dynamic_timestamp(card)
+        pub_time = datetime.fromtimestamp(ts).strftime("%m-%d %H:%M") if ts > 0 else "-"
+        text = _extract_dynamic_text(card)[:60] or "-"
+        table.add_row(str(idx), str(dynamic_id), pub_time, text)
+
+    common.console.print(table)
+
+    next_offset = data.get("next_offset") or data.get("offset")
+    if next_offset not in ("", None, offset):
+        common.console.print(f"\n[dim]下一页：bili my-dynamics --offset {next_offset}[/dim]")
+
+
+@click.command(name="dynamic-post")
+@click.argument("text", required=False)
+@click.option(
+    "--from-file",
+    "from_file",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    default=None,
+    help="从文件读取动态文本。",
+)
+@click.option("--json", "as_json", is_flag=True, help="输出原始 JSON。")
+def dynamic_post(text: str | None, from_file: Path | None, as_json: bool):
+    """发布一条纯文本动态。"""
+    from .. import client
+
+    cred = common.require_login(require_write=True)
+    raw_text = text or ""
+    if from_file is not None:
+        raw_text = from_file.read_text(encoding="utf-8")
+
+    content = raw_text.strip()
+    if not content:
+        common.exit_error("请提供动态文本。可用参数：TEXT 或 --from-file FILE")
+
+    data = common.run_or_exit(
+        client.post_text_dynamic(content, credential=cred),
+        "发布动态失败",
+    )
+
+    if as_json:
+        click.echo(json.dumps(data, ensure_ascii=False, indent=2))
+        return
+
+    dynamic_id = data.get("dynamic_id") or data.get("dynamic_id_str") or data.get("dyn_id")
+    if dynamic_id:
+        common.console.print(f"[green]✅ 已发布动态: {dynamic_id}[/green]")
+    else:
+        common.console.print("[green]✅ 已发布动态[/green]")
+
+
+@click.command(name="dynamic-delete")
+@click.argument("dynamic_id", type=int)
+@click.option("--yes", is_flag=True, help="跳过确认，直接删除。")
+@click.option("--json", "as_json", is_flag=True, help="输出原始 JSON。")
+def dynamic_delete(dynamic_id: int, yes: bool, as_json: bool):
+    """删除一条动态。"""
+    from .. import client
+
+    cred = common.require_login(require_write=True)
+
+    if not yes:
+        confirmed = click.confirm(f"确认删除动态 {dynamic_id} 吗？", default=False)
+        if not confirmed:
+            common.console.print("[yellow]已取消删除[/yellow]")
+            return
+
+    data = common.run_or_exit(
+        client.delete_dynamic(dynamic_id=dynamic_id, credential=cred),
+        "删除动态失败",
+    )
+
+    if as_json:
+        click.echo(json.dumps(data, ensure_ascii=False, indent=2))
+        return
+
+    common.console.print(f"[green]🗑️ 已删除动态: {dynamic_id}[/green]")

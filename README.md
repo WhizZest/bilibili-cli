@@ -79,6 +79,9 @@ bili search "关键词" --type video --max 5 # Search videos (top 5)
 bili search "关键词" --page 2            # Next page
 bili feed                               # Dynamic timeline
 bili feed --offset 1234567890           # Next page via returned cursor
+bili my-dynamics                         # My posted dynamics
+bili dynamic-post "抽个奖，明天开奖"       # Publish text dynamic
+bili dynamic-delete 123456789012345678   # Delete one dynamic
 
 # Collections
 bili favorites                          # Favorite folders
@@ -97,6 +100,7 @@ bili audio BV1ABcsztEcY -o ~/data/      # Custom output directory
 bili like BV1ABcsztEcY                  # Like
 bili coin BV1ABcsztEcY                  # Give coin
 bili triple BV1ABcsztEcY                # 一键三连 🎉
+bili unfollow 946974                    # Unfollow by UID
 ```
 
 ## Authentication
@@ -110,7 +114,7 @@ bilibili-cli uses a 3-tier authentication strategy:
 Credentials are validated on use for authenticated commands. Expired cookies are automatically cleared, while transient network validation failures keep local credentials for best-effort fallback.
 `bili status` exits with code `0` only when authenticated; otherwise it exits with `1`.
 
-Most commands work without login. Subtitles, favorites/following/watch-later/history, feed, and interactions require authentication.
+Most commands work without login. Subtitles, favorites/following/watch-later/history, feed, my-dynamics, and interactions require authentication. Write actions (like/coin/triple/unfollow/dynamic-post/dynamic-delete) require write-capable credential (`bili_jct`).
 
 Audio extraction requires the optional `audio` dependency group (`av`).
 
@@ -210,6 +214,9 @@ bili search "关键词" --type video --max 5 # 搜索视频（前5条）
 bili search "关键词" --page 2            # 第2页结果
 bili feed                               # 动态时间线
 bili feed --offset 1234567890           # 使用上一页游标翻页
+bili my-dynamics                         # 我发布的动态
+bili dynamic-post "抽个奖，明天开奖"       # 发布文字动态
+bili dynamic-delete 123456789012345678   # 删除单条动态
 
 # 收藏
 bili favorites                          # 收藏夹列表
@@ -227,6 +234,7 @@ bili audio BV1ABcsztEcY -o ~/data/      # 自定义输出目录
 bili like BV1ABcsztEcY                  # 点赞
 bili coin BV1ABcsztEcY                  # 投币
 bili triple BV1ABcsztEcY                # 一键三连 🎉
+bili unfollow 946974                    # 取消关注（按 UID）
 ```
 
 ## 认证策略
@@ -239,7 +247,7 @@ bilibili-cli 采用三级认证策略：
 
 需要认证的命令会自动校验凭证。过期 Cookie 会自动清除；如果只是临时网络异常，不会误清本地凭证（会以 best-effort 继续尝试）。
 
-大部分命令无需登录。字幕、收藏夹、动态和互动操作需要登录。
+大部分命令无需登录。字幕、收藏夹、动态和互动操作需要登录。写操作（like/coin/triple/unfollow/dynamic-post/dynamic-delete）需要可写凭证（包含 `bili_jct`）。
 
 音频提取功能需要安装可选依赖组 `audio`（即 `av`）。
 
