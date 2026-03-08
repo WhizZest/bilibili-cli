@@ -25,16 +25,16 @@ A CLI for Bilibili — browse videos, users, favorites from the terminal 📺
 ## Installation
 
 ```bash
-# Recommended: pipx (auto-manages virtualenv)
-pipx install bilibili-cli
-
-# Or: uv tool
+# Recommended: uv tool (fast, isolated)
 uv tool install bilibili-cli
 
+# Or: pipx
+pipx install bilibili-cli
+
 # If you need audio extraction support
-pipx install "bilibili-cli[audio]"
-# or
 uv tool install "bilibili-cli[audio]"
+# or
+pipx install "bilibili-cli[audio]"
 ```
 
 Or from source:
@@ -174,16 +174,16 @@ All bilibili-cli commands are available in OpenClaw after installation.
 ## 安装
 
 ```bash
-# 推荐：pipx（自动管理虚拟环境）
-pipx install bilibili-cli
-
-# 或者：uv tool
+# 推荐：uv tool（快速、隔离环境）
 uv tool install bilibili-cli
 
+# 或者：pipx
+pipx install bilibili-cli
+
 # 如果需要音频提取功能
-pipx install "bilibili-cli[audio]"
-# 或
 uv tool install "bilibili-cli[audio]"
+# 或
+pipx install "bilibili-cli[audio]"
 ```
 
 或从源码安装：
