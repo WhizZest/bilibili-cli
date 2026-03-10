@@ -86,6 +86,51 @@ async def get_video_info(bvid: str, credential: Credential | None = None) -> dic
     return await _call_api("获取视频信息", v.get_info())
 
 
+def format_subtitle_timeline(
+    raw: list[dict[str, Any]] | None,
+    output_format: str = "timeline",
+) -> str:
+    """Format subtitle items with timestamps."""
+    if not raw:
+        return ""
+
+    if output_format == "srt":
+        lines: list[str] = []
+        for index, item in enumerate(raw, 1):
+            lines.append(str(index))
+            lines.append(
+                f"{_format_subtitle_srt_time(item.get('from', 0.0))} --> "
+                f"{_format_subtitle_srt_time(item.get('to', 0.0))}"
+            )
+            lines.append(item.get("content", ""))
+            lines.append("")
+        return "\n".join(lines)
+
+    return "\n".join(
+        (
+            f"[{_format_subtitle_time(item.get('from', 0.0))} --> "
+            f"{_format_subtitle_time(item.get('to', 0.0))}] "
+            f"{item.get('content', '')}"
+        )
+        for item in raw
+    )
+
+
+def _format_subtitle_time(seconds: float) -> str:
+    """Format seconds as MM:SS.mmm."""
+    minutes = int(seconds // 60)
+    secs = seconds % 60
+    return f"{minutes:02d}:{secs:06.3f}"
+
+
+def _format_subtitle_srt_time(seconds: float) -> str:
+    """Format seconds as HH:MM:SS,mmm for SRT output."""
+    hours = int(seconds // 3600)
+    minutes = int((seconds % 3600) // 60)
+    secs = seconds % 60
+    return f"{hours:02d}:{minutes:02d}:{secs:06.3f}".replace(".", ",")
+
+
 async def get_video_subtitle(
     bvid: str, credential: Credential | None = None
 ) -> tuple[str, list]:

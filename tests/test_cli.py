@@ -143,6 +143,38 @@ def test_video_uses_optional_credential_mode_when_needed(runner, mock_video_info
         mock_get_cred.assert_called_once_with(mode="optional")
 
 
+def test_video_subtitle_timeline_uses_optional_credential_mode_when_needed(runner, mock_video_info):
+    with patch("bili_cli.commands.common.get_credential", return_value=None) as mock_get_cred, \
+         patch("bili_cli.client.extract_bvid", return_value="BV1test123"), \
+         patch("bili_cli.client.get_video_info", new_callable=AsyncMock, return_value=mock_video_info), \
+         patch("bili_cli.client.get_video_subtitle", new_callable=AsyncMock, return_value=("sub", [])):
+        result = runner.invoke(cli, ["video", "BV1test123", "--subtitle-timeline"])
+        assert result.exit_code == 0
+        mock_get_cred.assert_called_once_with(mode="optional")
+
+
+def test_video_subtitle_timeline_prints_timeline_output(runner, mock_video_info):
+    raw = [{"content": "Hello", "from": 0.0, "to": 2.5}]
+    with patch("bili_cli.commands.common.get_credential", return_value=None), \
+         patch("bili_cli.client.extract_bvid", return_value="BV1test123"), \
+         patch("bili_cli.client.get_video_info", new_callable=AsyncMock, return_value=mock_video_info), \
+         patch("bili_cli.client.get_video_subtitle", new_callable=AsyncMock, return_value=("Hello", raw)):
+        result = runner.invoke(cli, ["video", "BV1test123", "--subtitle-timeline"])
+        assert result.exit_code == 0
+        assert "[00:00.000 --> 00:02.500] Hello" in result.output
+
+
+def test_video_subtitle_timeline_supports_srt_output(runner, mock_video_info):
+    raw = [{"content": "Hello", "from": 0.0, "to": 2.5}]
+    with patch("bili_cli.commands.common.get_credential", return_value=None), \
+         patch("bili_cli.client.extract_bvid", return_value="BV1test123"), \
+         patch("bili_cli.client.get_video_info", new_callable=AsyncMock, return_value=mock_video_info), \
+         patch("bili_cli.client.get_video_subtitle", new_callable=AsyncMock, return_value=("Hello", raw)):
+        result = runner.invoke(cli, ["video", "BV1test123", "--subtitle-timeline", "--subtitle-format", "srt"])
+        assert result.exit_code == 0
+        assert "00:00:00,000 --> 00:00:02,500" in result.output
+
+
 def test_video_subtitle_error_is_nonfatal(runner, mock_video_info):
     with patch("bili_cli.commands.common.get_credential", return_value=None), \
          patch("bili_cli.client.extract_bvid", return_value="BV1test123"), \
