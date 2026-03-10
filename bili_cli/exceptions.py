@@ -15,3 +15,11 @@ class NetworkError(BiliError):
 
 class AuthenticationError(BiliError):
     """Raised when authentication data is missing or invalid."""
+
+
+class RateLimitError(BiliError):
+    """Raised when Bilibili rate-limits the request (HTTP 412/429)."""
+
+
+class NotFoundError(BiliError):
+    """Raised when a video, user, or resource is not found."""

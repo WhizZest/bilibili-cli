@@ -11,6 +11,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import time
 import shutil
 import subprocess
 import sys
@@ -32,6 +33,10 @@ REQUIRED_COOKIES = {"SESSDATA"}
 # Extra cookie fields that help bypass Bilibili's 412 anti-scraping checks
 EXTRA_COOKIE_FIELDS = ("buvid3", "buvid4", "dedeuserid")
 
+# Credential TTL: warn and attempt refresh after 7 days
+CREDENTIAL_TTL_DAYS = 7
+_CREDENTIAL_TTL_SECONDS = CREDENTIAL_TTL_DAYS * 86400
+
 
 AuthMode = Literal["optional", "read", "write"]
 
@@ -49,6 +54,22 @@ def get_credential(mode: AuthMode = "read") -> Credential | None:
     # 1. Saved credential file
     cred = _load_saved_credential()
     if cred:
+        # Check TTL — try to refresh from browser if stale
+        if _is_credential_stale():
+            logger.info("Credential older than %d days, attempting browser refresh", CREDENTIAL_TTL_DAYS)
+            fresh = _extract_browser_credential()
+            if fresh:
+                validation = _validate_credential(fresh, require_write=require_write)
+                if validation is True:
+                    logger.info("Refreshed credential from browser")
+                    save_credential(fresh)
+                    return fresh
+            # Refresh failed — validate existing credential
+            logger.warning(
+                "Credential is %d+ days old; browser refresh failed. Validating existing credential...",
+                CREDENTIAL_TTL_DAYS,
+            )
+
         if mode == "optional":
             return cred
         validation = _validate_credential(cred, require_write=require_write)
@@ -80,6 +101,21 @@ def get_credential(mode: AuthMode = "read") -> Credential | None:
             logger.warning("Browser cookies are expired/invalid")
 
     return None
+
+
+def _is_credential_stale() -> bool:
+    """Check if saved credential file is older than TTL."""
+    if not CREDENTIAL_FILE.exists():
+        return False
+    try:
+        data = json.loads(CREDENTIAL_FILE.read_text())
+        saved_at = data.get("saved_at", 0)
+        if not saved_at:
+            # Legacy file without saved_at — treat as stale to add the field
+            return True
+        return (time.time() - saved_at) > _CREDENTIAL_TTL_SECONDS
+    except (json.JSONDecodeError, OSError):
+        return False
 
 
 def _validate_credential(cred: Credential, require_write: bool = False) -> bool | None:
@@ -226,7 +262,7 @@ print(json.dumps({"error": "no_cookies"}))
 
 
 def save_credential(credential: Credential):
-    """Save credential to config file."""
+    """Save credential to config file with timestamp for TTL tracking."""
     CONFIG_DIR.mkdir(parents=True, exist_ok=True)
 
     data = {
@@ -236,6 +272,7 @@ def save_credential(credential: Credential):
         "buvid3": credential.buvid3 or "",
         "buvid4": credential.buvid4 or "",
         "dedeuserid": credential.dedeuserid or "",
+        "saved_at": time.time(),
     }
     CREDENTIAL_FILE.write_text(json.dumps(data, indent=2, ensure_ascii=False))
     CREDENTIAL_FILE.chmod(0o600)  # Owner-only read/write

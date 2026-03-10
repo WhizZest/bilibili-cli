@@ -24,7 +24,7 @@ from bilibili_api.exceptions import (
 )
 from bilibili_api.utils.network import Credential
 
-from .exceptions import AuthenticationError, BiliError, InvalidBvidError, NetworkError
+from .exceptions import AuthenticationError, BiliError, InvalidBvidError, NetworkError, NotFoundError, RateLimitError
 
 logger = logging.getLogger(__name__)
 
@@ -60,8 +60,15 @@ def _map_api_error(action: str, exc: Exception) -> BiliError:
 
     if isinstance(exc, ResponseCodeException):
         code = getattr(exc, "code", None)
+        # Auth failures
         if code in {-101, -111}:
             return AuthenticationError(f"{action}: {exc}")
+        # Not found
+        if code in {-404, 62002, 62004}:
+            return NotFoundError(f"{action}: {exc}")
+        # Rate limit / anti-scraping
+        if code in {-412, 412}:
+            return RateLimitError(f"{action}: {exc}")
         return BiliError(f"{action}: [{code}] {exc}")
 
     if isinstance(exc, (NetworkException, ResponseException, aiohttp.ClientError, asyncio.TimeoutError)):
