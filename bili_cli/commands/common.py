@@ -34,6 +34,13 @@ def run(coro):
     return asyncio.run(coro)
 
 
+def structured_output_options(command: Callable) -> Callable:
+    """Add --json/--yaml options to a Click command."""
+    command = click.option("--yaml", "as_yaml", is_flag=True, help="输出 YAML，推荐给 AI Agent。")(command)
+    command = click.option("--json", "as_json", is_flag=True, help="输出 JSON。")(command)
+    return command
+
+
 def resolve_output_format(*, as_json: bool = False, as_yaml: bool = False) -> OutputFormat:
     """Resolve mutually exclusive machine-readable output flags."""
     if as_json and as_yaml:

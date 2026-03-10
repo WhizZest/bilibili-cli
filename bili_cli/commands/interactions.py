@@ -11,8 +11,7 @@ from . import common
 @click.command()
 @click.argument("bv_or_url")
 @click.option("--undo", is_flag=True, help="取消点赞。")
-@click.option("--json", "as_json", is_flag=True, help="输出 JSON。")
-@click.option("--yaml", "as_yaml", is_flag=True, help="输出 YAML，推荐给 AI Agent。")
+@common.structured_output_options
 def like(bv_or_url: str, undo: bool, as_json: bool, as_yaml: bool):
     """点赞视频。"""
     from .. import client
@@ -37,8 +36,7 @@ def like(bv_or_url: str, undo: bool, as_json: bool, as_yaml: bool):
 @click.command()
 @click.argument("bv_or_url")
 @click.option("--num", "-n", default=1, type=click.IntRange(1, 2), help="投币数量 (1 或 2)。")
-@click.option("--json", "as_json", is_flag=True, help="输出 JSON。")
-@click.option("--yaml", "as_yaml", is_flag=True, help="输出 YAML，推荐给 AI Agent。")
+@common.structured_output_options
 def coin(bv_or_url: str, num: int, as_json: bool, as_yaml: bool):
     """给视频投币。"""
     from .. import client
@@ -59,8 +57,7 @@ def coin(bv_or_url: str, num: int, as_json: bool, as_yaml: bool):
 
 @click.command()
 @click.argument("bv_or_url")
-@click.option("--json", "as_json", is_flag=True, help="输出 JSON。")
-@click.option("--yaml", "as_yaml", is_flag=True, help="输出 YAML，推荐给 AI Agent。")
+@common.structured_output_options
 def triple(bv_or_url: str, as_json: bool, as_yaml: bool):
     """一键三连（点赞 + 投币 + 收藏）。"""
     from .. import client
@@ -99,8 +96,7 @@ def triple(bv_or_url: str, as_json: bool, as_yaml: bool):
 @click.command()
 @click.argument("uid", type=int)
 @click.option("--yes", is_flag=True, help="跳过确认，直接取消关注。")
-@click.option("--json", "as_json", is_flag=True, help="输出 JSON。")
-@click.option("--yaml", "as_yaml", is_flag=True, help="输出 YAML，推荐给 AI Agent。")
+@common.structured_output_options
 def unfollow(uid: int, yes: bool, as_json: bool, as_yaml: bool):
     """取消关注某个 UP（按 UID）。"""
     from .. import client

@@ -22,8 +22,7 @@ from . import common
 @click.option("--comments", "-c", is_flag=True, help="显示评论。")
 @click.option("--ai", is_flag=True, help="显示 AI 总结。")
 @click.option("--related", "-r", is_flag=True, help="显示相关推荐视频。")
-@click.option("--json", "as_json", is_flag=True, help="输出 JSON。")
-@click.option("--yaml", "as_yaml", is_flag=True, help="输出 YAML，推荐给 AI Agent。")
+@common.structured_output_options
 def video(
     bv_or_url: str,
     subtitle: bool,

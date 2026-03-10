@@ -28,6 +28,12 @@ from .exceptions import AuthenticationError, BiliError, InvalidBvidError, Networ
 
 logger = logging.getLogger(__name__)
 
+_USER_AGENT = (
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+    "AppleWebKit/537.36 (KHTML, like Gecko) "
+    "Chrome/133.0.0.0 Safari/537.36"
+)
+
 
 # ---------------------------------------------------------------------------
 # BV ID helpers
@@ -345,11 +351,7 @@ async def _get_video_comments_direct(
         "sort": 2,  # hot/popular
     }
     headers = {
-        "User-Agent": (
-            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
-            "AppleWebKit/537.36 (KHTML, like Gecko) "
-            "Chrome/133.0.0.0 Safari/537.36"
-        ),
+        "User-Agent": _USER_AGENT,
         "Origin": "https://www.bilibili.com",
         "Referer": f"https://www.bilibili.com/video/{bvid}/",
         "Accept": "application/json, text/plain, */*",
@@ -619,11 +621,7 @@ async def triple_video(bvid: str, credential: Credential) -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 _DOWNLOAD_HEADERS = {
-    "User-Agent": (
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
-        "AppleWebKit/537.36 (KHTML, like Gecko) "
-        "Chrome/133.0.0.0 Safari/537.36"
-    ),
+    "User-Agent": _USER_AGENT,
     "Referer": "https://www.bilibili.com",
 }
 

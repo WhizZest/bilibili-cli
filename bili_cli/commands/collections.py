@@ -95,8 +95,7 @@ def _extract_dynamic_text(item: dict[str, Any]) -> str:
 @click.command()
 @click.argument("fav_id", required=False, type=int)
 @click.option("--page", "-p", default=1, type=click.IntRange(1), help="页码 (默认 1，最小 1)。")
-@click.option("--json", "as_json", is_flag=True, help="输出 JSON。")
-@click.option("--yaml", "as_yaml", is_flag=True, help="输出 YAML，推荐给 AI Agent。")
+@common.structured_output_options
 def favorites(fav_id: int | None, page: int, as_json: bool, as_yaml: bool):
     """浏览收藏夹。
 
@@ -181,8 +180,7 @@ def favorites(fav_id: int | None, page: int, as_json: bool, as_yaml: bool):
 
 @click.command()
 @click.option("--page", "-p", default=1, type=click.IntRange(1), help="页码 (默认 1，最小 1)。")
-@click.option("--json", "as_json", is_flag=True, help="输出 JSON。")
-@click.option("--yaml", "as_yaml", is_flag=True, help="输出 YAML，推荐给 AI Agent。")
+@common.structured_output_options
 def following(page: int, as_json: bool, as_yaml: bool):
     """查看关注列表。"""
     from .. import client
@@ -235,8 +233,7 @@ def following(page: int, as_json: bool, as_yaml: bool):
 @click.command()
 @click.option("--page", "-p", default=1, type=click.IntRange(1), help="页码 (默认 1，最小 1)。")
 @click.option("--max", "-n", "count", default=30, type=click.IntRange(1, 100), help="显示数量 (默认 30，1-100)。")
-@click.option("--json", "as_json", is_flag=True, help="输出 JSON。")
-@click.option("--yaml", "as_yaml", is_flag=True, help="输出 YAML，推荐给 AI Agent。")
+@common.structured_output_options
 def history(page: int, count: int, as_json: bool, as_yaml: bool):
     """查看观看历史。"""
     from .. import client
@@ -296,8 +293,7 @@ def history(page: int, count: int, as_json: bool, as_yaml: bool):
 
 
 @click.command(name="watch-later")
-@click.option("--json", "as_json", is_flag=True, help="输出 JSON。")
-@click.option("--yaml", "as_yaml", is_flag=True, help="输出 YAML，推荐给 AI Agent。")
+@common.structured_output_options
 def watch_later(as_json: bool, as_yaml: bool):
     """查看稍后再看列表。"""
     from .. import client
@@ -345,8 +341,7 @@ def watch_later(as_json: bool, as_yaml: bool):
 
 @click.command()
 @click.option("--offset", default="", help="分页游标；留空为最新。可使用上一页返回的 next_offset/offset。")
-@click.option("--json", "as_json", is_flag=True, help="输出 JSON。")
-@click.option("--yaml", "as_yaml", is_flag=True, help="输出 YAML，推荐给 AI Agent。")
+@common.structured_output_options
 def feed(offset: str, as_json: bool, as_yaml: bool):
     """查看动态时间线。"""
     from .. import client
@@ -421,8 +416,7 @@ def feed(offset: str, as_json: bool, as_yaml: bool):
 @click.option("--offset", default=0, type=click.IntRange(0), help="分页偏移量；默认 0。")
 @click.option("--top/--no-top", "need_top", default=False, help="是否包含置顶动态。")
 @click.option("--max", "-n", "count", default=20, type=click.IntRange(1, 50), help="显示条数 (1-50)。")
-@click.option("--json", "as_json", is_flag=True, help="输出 JSON。")
-@click.option("--yaml", "as_yaml", is_flag=True, help="输出 YAML，推荐给 AI Agent。")
+@common.structured_output_options
 def my_dynamics(offset: int, need_top: bool, count: int, as_json: bool, as_yaml: bool):
     """查看我发布的动态。"""
     from .. import client
@@ -487,8 +481,7 @@ def my_dynamics(offset: int, need_top: bool, count: int, as_json: bool, as_yaml:
     default=None,
     help="从文件读取动态文本。",
 )
-@click.option("--json", "as_json", is_flag=True, help="输出 JSON。")
-@click.option("--yaml", "as_yaml", is_flag=True, help="输出 YAML，推荐给 AI Agent。")
+@common.structured_output_options
 def dynamic_post(text: str | None, from_file: Path | None, as_json: bool, as_yaml: bool):
     """发布一条纯文本动态。"""
     from .. import client
@@ -525,8 +518,7 @@ def dynamic_post(text: str | None, from_file: Path | None, as_json: bool, as_yam
 @click.command(name="dynamic-delete")
 @click.argument("dynamic_id", type=int)
 @click.option("--yes", is_flag=True, help="跳过确认，直接删除。")
-@click.option("--json", "as_json", is_flag=True, help="输出 JSON。")
-@click.option("--yaml", "as_yaml", is_flag=True, help="输出 YAML，推荐给 AI Agent。")
+@common.structured_output_options
 def dynamic_delete(dynamic_id: int, yes: bool, as_json: bool, as_yaml: bool):
     """删除一条动态。"""
     from .. import client

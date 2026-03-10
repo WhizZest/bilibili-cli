@@ -56,8 +56,7 @@ def _format_video_length(length_raw: object) -> str:
 
 @click.command()
 @click.argument("uid_or_name")
-@click.option("--json", "as_json", is_flag=True, help="输出 JSON。")
-@click.option("--yaml", "as_yaml", is_flag=True, help="输出 YAML，推荐给 AI Agent。")
+@common.structured_output_options
 def user(uid_or_name: str, as_json: bool, as_yaml: bool):
     """查看 UP 主资料。
 
@@ -102,8 +101,7 @@ def user(uid_or_name: str, as_json: bool, as_yaml: bool):
 @click.command(name="user-videos")
 @click.argument("uid_or_name")
 @click.option("--max", "-n", "count", default=10, type=click.IntRange(1), help="显示的视频数量 (默认 10，最小 1)。")
-@click.option("--json", "as_json", is_flag=True, help="输出 JSON。")
-@click.option("--yaml", "as_yaml", is_flag=True, help="输出 YAML，推荐给 AI Agent。")
+@common.structured_output_options
 def user_videos(uid_or_name: str, count: int, as_json: bool, as_yaml: bool):
     """查看 UP 主的视频列表。
 
@@ -152,8 +150,7 @@ def user_videos(uid_or_name: str, count: int, as_json: bool, as_yaml: bool):
 @click.option("--type", "search_type", default="user", type=click.Choice(["user", "video"]), help="搜索类型 (默认 user)。")
 @click.option("--page", default=1, type=click.IntRange(1), help="页码 (默认 1，最小 1)。")
 @click.option("--max", "-n", "count", default=20, type=click.IntRange(1), help="显示数量 (默认 20，最小 1)。")
-@click.option("--json", "as_json", is_flag=True, help="输出 JSON。")
-@click.option("--yaml", "as_yaml", is_flag=True, help="输出 YAML，推荐给 AI Agent。")
+@common.structured_output_options
 def search(keyword: str, search_type: str, page: int, count: int, as_json: bool, as_yaml: bool):
     """搜索用户或视频。"""
     from .. import client

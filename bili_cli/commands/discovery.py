@@ -12,8 +12,7 @@ from . import common
 @click.command(name="hot")
 @click.option("--page", "-p", default=1, type=click.IntRange(1), help="页码 (默认 1，最小 1)。")
 @click.option("--max", "-n", "count", default=20, type=click.IntRange(1), help="显示数量 (默认 20，最小 1)。")
-@click.option("--json", "as_json", is_flag=True, help="输出 JSON。")
-@click.option("--yaml", "as_yaml", is_flag=True, help="输出 YAML，推荐给 AI Agent。")
+@common.structured_output_options
 def hot_cmd(page: int, count: int, as_json: bool, as_yaml: bool):
     """查看热门视频。"""
     from .. import client
@@ -63,8 +62,7 @@ def hot_cmd(page: int, count: int, as_json: bool, as_yaml: bool):
 @click.command(name="rank")
 @click.option("--day", default="3", type=click.Choice(["3", "7"]), help="排行周期：3 或 7 天（默认 3）。")
 @click.option("--max", "-n", "count", default=20, type=click.IntRange(1), help="显示数量 (默认 20，最小 1)。")
-@click.option("--json", "as_json", is_flag=True, help="输出 JSON。")
-@click.option("--yaml", "as_yaml", is_flag=True, help="输出 YAML，推荐给 AI Agent。")
+@common.structured_output_options
 def rank_cmd(day: str, count: int, as_json: bool, as_yaml: bool):
     """查看全站排行榜。"""
     from .. import client

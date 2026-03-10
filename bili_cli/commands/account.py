@@ -30,8 +30,7 @@ def logout():
 
 
 @click.command()
-@click.option("--json", "as_json", is_flag=True, help="输出 JSON。")
-@click.option("--yaml", "as_yaml", is_flag=True, help="输出 YAML，推荐给 AI Agent。")
+@common.structured_output_options
 def status(as_json: bool, as_yaml: bool):
     """检查登录状态。"""
     output_format = common.resolve_output_format(as_json=as_json, as_yaml=as_yaml)
@@ -69,8 +68,7 @@ def status(as_json: bool, as_yaml: bool):
 
 
 @click.command()
-@click.option("--json", "as_json", is_flag=True, help="输出 JSON。")
-@click.option("--yaml", "as_yaml", is_flag=True, help="输出 YAML，推荐给 AI Agent。")
+@common.structured_output_options
 def whoami(as_json: bool, as_yaml: bool):
     """查看当前登录用户的详细信息。"""
     from .. import client
