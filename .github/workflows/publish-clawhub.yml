@@ -55,7 +55,9 @@ jobs:
           # Workaround: clawhub@0.7.0 publish doesn't send acceptLicenseTerms,
           # which the server now requires. Use a Node.js script to publish with
           # the corrected payload.
-          node - <<'PUBLISH_SCRIPT'
+          # Note: NODE_TLS_REJECT_UNAUTHORIZED=0 is needed because api.clawhub.io
+          # has an expired SSL certificate. Remove once ClawHub renews their cert.
+          NODE_TLS_REJECT_UNAUTHORIZED=0 node - <<'PUBLISH_SCRIPT'
           const { resolve } = require("path");
           const { readFileSync, statSync, readdirSync } = require("fs");
           const folder = resolve(".");
