@@ -80,6 +80,15 @@ def test_whoami_not_logged_in(runner):
         assert "未登录" in result.output
 
 
+def test_user_not_found_yaml_error(runner):
+    with patch("bili_cli.client.search_user", new_callable=AsyncMock, return_value=[]):
+        result = runner.invoke(cli, ["user", "unknown-user", "--yaml"])
+        assert result.exit_code != 0
+        data = _load_yaml(result.output)
+        assert data["ok"] is False
+        assert data["error"]["code"] == "api_error"
+
+
 def test_whoami_json(runner, mock_user_info, mock_relation_info):
     mock_cred = MagicMock()
     with patch("bili_cli.commands.common.get_credential", return_value=mock_cred), \

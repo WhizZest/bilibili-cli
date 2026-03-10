@@ -98,6 +98,13 @@ def _normalize_success_payload(data: object) -> object:
 
 def exit_error(message: str) -> NoReturn:
     """Print an error message and exit with non-zero status."""
+    ctx = click.get_current_context(silent=True)
+    params = ctx.params if ctx is not None else {}
+    as_json = bool(params.get("as_json", False))
+    as_yaml = bool(params.get("as_yaml", False))
+    output_format = None if as_json and as_yaml else resolve_output_format(as_json=as_json, as_yaml=as_yaml)
+    if emit_structured(error_payload("api_error", message), output_format):
+        sys.exit(1)
     console.print(f"[red]❌ {message}[/red]")
     sys.exit(1)
 
