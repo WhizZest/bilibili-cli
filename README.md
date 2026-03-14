@@ -217,15 +217,9 @@ git clone git@github.com:jackwener/bilibili-cli.git .agents/skills/bilibili-cli
 
 Once added, AI agents that support the `.agents/skills/` convention will automatically discover and use bilibili-cli commands.
 
-### OpenClaw / ClawHub
+### ~~OpenClaw / ClawHub~~ (Deprecated)
 
-Officially supports [OpenClaw](https://openclaw.ai) and [ClawHub](https://docs.openclaw.ai/tools/clawhub). Install via ClawHub:
-
-```bash
-clawhub install bilibili-cli
-```
-
-All bilibili-cli commands are available in OpenClaw after installation.
+> ⚠️ ClawHub install method is deprecated and no longer supported. Use [Skills CLI](#skills-cli-recommended) or Manual Install above.
 
 ## Troubleshooting
 
@@ -444,15 +438,9 @@ git clone git@github.com:jackwener/bilibili-cli.git .agents/skills/bilibili-cli
 
 添加后，支持 `.agents/skills/` 的 AI Agent 会自动发现并使用 bilibili-cli 命令。
 
-### OpenClaw / ClawHub
+### ~~OpenClaw / ClawHub~~（已过时）
 
-官方支持 [OpenClaw](https://openclaw.ai) 和 [ClawHub](https://docs.openclaw.ai/tools/clawhub) 生态。通过 ClawHub 安装：
-
-```bash
-clawhub install bilibili-cli
-```
-
-安装后即可在 OpenClaw 中直接使用所有 bilibili-cli 命令。
+> ⚠️ ClawHub 安装方式已过时，不再支持。请使用上方的 Skills CLI 或手动安装。
 
 ## 常见问题
 
