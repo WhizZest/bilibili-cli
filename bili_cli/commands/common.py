@@ -75,6 +75,11 @@ def qr_login():
     return auth.qr_login()
 
 
+def browser_login():
+    """Return login coroutine for browser login flow."""
+    return auth.browser_login()
+
+
 def print_login_required(message: str | None = None):
     """Print a standard login-required warning message."""
     if message:

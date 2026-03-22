@@ -144,18 +144,35 @@ bili coin BV1ABcsztEcY --yaml           # Structured write result
 
 ## Authentication
 
-bilibili-cli uses a 3-tier authentication strategy:
+bilibili-cli uses a 4-tier authentication strategy:
 
 1. **Saved credential** — loads from `~/.bilibili-cli/credential.json`
 2. **Browser cookies** — auto-extracts from Chrome, Firefox, Edge, or Brave
-3. **QR code login** — `bili login` displays a QR code in the terminal
+3. **Selenium browser login** — `bili login --method browser` launches Chrome for manual login
+4. **QR code login** — `bili login` displays a QR code in the terminal
 
 Credentials are validated on use for authenticated commands. Expired cookies are automatically cleared, while transient network validation failures keep local credentials for best-effort fallback.
 `bili status` exits with code `0` only when authenticated; otherwise it exits with `1`.
 
 Most commands work without login. Subtitles, favorites/following/watch-later/history, feed, my-dynamics, and interactions require authentication. Write actions (like/coin/triple/unfollow/dynamic-post/dynamic-delete) require write-capable credential (`bili_jct`).
 
-Audio extraction requires the optional `audio` dependency group (`av`).
+Audio extraction requires optional `audio` dependency group (`av`).
+
+### Login Methods
+
+**Browser Login (Recommended)**:
+```bash
+bili login --method browser
+```
+This method uses Selenium to launch Chrome, navigate to bilibili.com, and extract cookies after you log in. It's more reliable than automatic browser cookie extraction and works with modern encrypted browsers.
+
+**QR Code Login**:
+```bash
+bili login
+# or
+bili login --method qr
+```
+Displays a QR code in the terminal for scanning with the Bilibili app.
 
 ## Structured Output
 
@@ -223,11 +240,11 @@ Once added, AI agents that support the `.agents/skills/` convention will automat
 
 ## Troubleshooting
 
-- `需要登录` / `not_authenticated` — Run `bili login` to scan QR code, or ensure you're logged in to bilibili.com in Chrome/Firefox/Edge/Brave.
+- `需要登录` / `not_authenticated` — Run `bili login --method browser` for browser login (recommended), or `bili login` for QR code login.
 - `HTTP 412` / `RateLimitError` — Bilibili anti-scraping triggered. Wait a moment and retry, or reduce `--max`.
 - `无法提取 BV 号` / `InvalidBvidError` — Check the BV ID or URL format. Must be `BV` followed by 10 alphanumeric characters.
 - `NetworkError` — Check your network connection. If behind a proxy, ensure it supports the target domain.
-- `当前登录凭证不支持写操作` — Your saved cookies lack `bili_jct`. Run `bili login` to re-authorize with full write permission.
+- `当前登录凭证不支持写操作` — Your saved cookies lack `bili_jct`. Run `bili login --method browser` to re-authorize with full write permission.
 
 Structured error codes: `not_authenticated`, `permission_denied`, `invalid_input`, `network_error`, `upstream_error`, `not_found`, `rate_limited`, `internal_error`.
 
@@ -366,15 +383,32 @@ bili coin BV1ABcsztEcY --yaml           # 结构化写操作结果
 
 ## 认证策略
 
-bilibili-cli 采用三级认证策略：
+bilibili-cli 采用四级认证策略：
 
 1. **已保存凭证** — 从 `~/.bilibili-cli/credential.json` 加载
 2. **浏览器 Cookie** — 自动从 Chrome、Firefox、Edge、Brave 提取
-3. **扫码登录** — `bili login` 在终端显示二维码
+3. **Selenium 浏览器登录** — `bili login --method browser` 启动 Chrome 进行手动登录
+4. **扫码登录** — `bili login` 在终端显示二维码
 
 需要认证的命令会自动校验凭证。过期 Cookie 会自动清除；如果只是临时网络异常，不会误清本地凭证（会以 best-effort 继续尝试）。
 
 大部分命令无需登录。字幕、收藏夹、动态和互动操作需要登录。写操作（like/coin/triple/unfollow/dynamic-post/dynamic-delete）需要可写凭证（包含 `bili_jct`）。
+
+### 登录方式
+
+**浏览器登录（推荐）**：
+```bash
+bili login --method browser
+```
+使用 Selenium 启动 Chrome，访问 bilibili.com，登录后自动提取 Cookie。比自动浏览器 Cookie 提取更可靠，支持加密浏览器。
+
+**扫码登录**：
+```bash
+bili login
+# 或
+bili login --method qr
+```
+在终端显示二维码，使用 Bilibili App 扫码登录。
 
 ## 结构化输出
 
@@ -444,11 +478,11 @@ git clone git@github.com:jackwener/bilibili-cli.git .agents/skills/bilibili-cli
 
 ## 常见问题
 
-- `需要登录` — 执行 `bili login` 扫码登录，或确保已在 Chrome/Firefox/Edge/Brave 登录 bilibili.com
+- `需要登录` — 执行 `bili login --method browser` 进行浏览器登录（推荐），或 `bili login` 扫码登录
 - `HTTP 412` / `RateLimitError` — B 站反爬触发，稍等后重试，或减小 `--max`
 - `无法提取 BV 号` — 检查 BV 号或 URL 格式，必须是 `BV` + 10 位字母数字
 - `NetworkError` — 检查网络连接
-- `当前登录凭证不支持写操作` — 保存的 Cookie 缺少 `bili_jct`，执行 `bili login` 重新授权
+- `当前登录凭证不支持写操作` — 保存的 Cookie 缺少 `bili_jct`，执行 `bili login --method browser` 重新授权
 
 ## License
 

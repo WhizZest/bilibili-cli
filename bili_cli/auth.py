@@ -100,6 +100,20 @@ def get_credential(mode: AuthMode = "read") -> Credential | None:
         if validation is False:
             logger.warning("Browser cookies are expired/invalid")
 
+    # 3. Selenium cookie extraction (fallback)
+    cred = _extract_selenium_credential()
+    if cred:
+        validation = _validate_credential(cred, require_write=require_write)
+        if validation is True:
+            logger.info("Extracted valid credential via Selenium")
+            save_credential(cred)
+            return cred
+        if validation is None:
+            logger.warning("Skipping Selenium credential validation due to network; using best effort")
+            return cred
+        if validation is False:
+            logger.warning("Selenium cookies are expired/invalid")
+
     return None
 
 
@@ -261,6 +275,84 @@ print(json.dumps({"error": "no_cookies"}))
         return None
 
 
+def _extract_selenium_credential() -> Credential | None:
+    """Extract Bilibili cookies using Selenium browser automation.
+
+    Launches a new Chrome instance, navigates to bilibili.com,
+    prompts user to login if needed, then extracts cookies.
+    """
+    try:
+        from selenium import webdriver
+        from selenium.webdriver.chrome.options import Options
+        from webdriver_manager.chrome import ChromeDriverManager
+    except ImportError:
+        logger.warning("Selenium or webdriver-manager not installed, skipping")
+        return None
+
+    try:
+        from selenium.webdriver.chrome.service import Service
+    except ImportError:
+        Service = None
+
+    chrome_options = Options()
+    chrome_options.add_argument("--disable-gpu")
+    chrome_options.add_argument("--no-sandbox")
+    chrome_options.add_argument("--disable-dev-shm-usage")
+
+    logger.info("Starting Chrome for cookie extraction...")
+    try:
+        if Service:
+            service = Service(ChromeDriverManager().install())
+            driver = webdriver.Chrome(service=service, options=chrome_options)
+        else:
+            driver = webdriver.Chrome(options=chrome_options)
+    except Exception as e:
+        logger.warning("Failed to start Chrome: %s", e)
+        return None
+
+    try:
+        logger.info("Navigating to bilibili.com...")
+        driver.get("https://www.bilibili.com")
+        time.sleep(3)
+
+        page_source = driver.page_source
+        if '登录' in page_source or 'Login' in page_source:
+            logger.info("User not logged in, waiting for manual login...")
+            print("\n⚠️  检测到未登录状态")
+            print("请在浏览器中手动登录B站，登录完成后按回车继续...")
+            input("按回车继续...")
+            time.sleep(2)
+
+        logger.info("Extracting cookies...")
+        cookies = driver.get_cookies()
+
+        bilibili_cookies = {}
+        for cookie in cookies:
+            if 'bilibili.com' in cookie.get('domain', ''):
+                bilibili_cookies[cookie['name']] = cookie['value']
+
+        if 'SESSDATA' not in bilibili_cookies:
+            logger.warning("No SESSDATA cookie found")
+            return None
+
+        logger.info("Found %d Bilibili cookies", len(bilibili_cookies))
+
+        return Credential(
+            sessdata=bilibili_cookies.get('SESSDATA', ''),
+            bili_jct=bilibili_cookies.get('bili_jct', ''),
+            ac_time_value=bilibili_cookies.get('ac_time_value', ''),
+            buvid3=bilibili_cookies.get('buvid3', ''),
+            buvid4=bilibili_cookies.get('buvid4', ''),
+            dedeuserid=bilibili_cookies.get('DedeUserID', ''),
+        )
+
+    except Exception as e:
+        logger.warning("Selenium cookie extraction failed: %s", e)
+        return None
+    finally:
+        driver.quit()
+
+
 def save_credential(credential: Credential):
     """Save credential to config file with timestamp for TTL tracking."""
     CONFIG_DIR.mkdir(parents=True, exist_ok=True)
@@ -406,3 +498,24 @@ async def qr_login() -> Credential:
             print("  📲 已扫码，请在手机上确认...")
 
         await asyncio.sleep(2)
+
+
+async def browser_login() -> Credential:
+    """Browser login via Selenium.
+
+    Launches Chrome, navigates to bilibili.com,
+    prompts user to login if needed, then extracts cookies.
+    """
+    cred = _extract_selenium_credential()
+    if not cred:
+        raise RuntimeError("浏览器登录失败，请确保已安装selenium和webdriver-manager")
+
+    validation = _validate_credential(cred, require_write=True)
+    if validation is True:
+        print("\n✅ 登录成功！凭证已保存")
+        return cred
+    elif validation is False:
+        raise RuntimeError("Cookie验证失败，请重新登录")
+    else:
+        print("\n✅ 登录成功（网络验证跳过）！凭证已保存")
+        return cred
