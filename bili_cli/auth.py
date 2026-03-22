@@ -100,20 +100,6 @@ def get_credential(mode: AuthMode = "read") -> Credential | None:
         if validation is False:
             logger.warning("Browser cookies are expired/invalid")
 
-    # 3. Selenium cookie extraction (fallback)
-    cred = _extract_selenium_credential()
-    if cred:
-        validation = _validate_credential(cred, require_write=require_write)
-        if validation is True:
-            logger.info("Extracted valid credential via Selenium")
-            save_credential(cred)
-            return cred
-        if validation is None:
-            logger.warning("Skipping Selenium credential validation due to network; using best effort")
-            return cred
-        if validation is False:
-            logger.warning("Selenium cookies are expired/invalid")
-
     return None
 
 
@@ -133,7 +119,7 @@ def _is_credential_stale() -> bool:
 
 
 def _validate_credential(cred: Credential, require_write: bool = False) -> bool | None:
-    """Check if a credential is valid.
+    """Check if a credential is valid (sync version).
 
     Returns:
       - True: credential validated by API
@@ -161,6 +147,31 @@ def _validate_credential(cred: Credential, require_write: bool = False) -> bool 
         return asyncio.run(_check())
     except Exception:
         return None
+
+
+async def _validate_credential_async(cred: Credential, require_write: bool = False) -> bool | None:
+    """Check if a credential is valid (async version).
+
+    Returns:
+      - True: credential validated by API
+      - False: credential confirmed invalid or missing required fields
+      - None: validation is indeterminate due to network/runtime issues
+    """
+    from bilibili_api import user
+    from bilibili_api.exceptions import NetworkException
+
+    if not getattr(cred, "sessdata", ""):
+        return False
+    if require_write and not getattr(cred, "bili_jct", ""):
+        return False
+
+    try:
+        await user.get_self_info(cred)
+        return True
+    except NetworkException:
+        return None
+    except Exception:
+        return False
 
 
 def _load_saved_credential() -> Credential | None:
@@ -320,11 +331,16 @@ def _extract_selenium_credential() -> Credential | None:
             logger.info("User not logged in, waiting for manual login...")
             print("\n⚠️  检测到未登录状态")
             print("请在浏览器中手动登录B站，登录完成后按回车继续...")
+            print("⚠️  请不要手动关闭浏览器，按回车后浏览器会自动关闭")
             input("按回车继续...")
             time.sleep(2)
 
         logger.info("Extracting cookies...")
-        cookies = driver.get_cookies()
+        try:
+            cookies = driver.get_cookies()
+        except Exception as e:
+            logger.warning("Failed to extract cookies (browser may have been closed): %s", e)
+            raise RuntimeError("浏览器已被手动关闭，请重新运行登录命令")
 
         bilibili_cookies = {}
         for cookie in cookies:
@@ -510,12 +526,14 @@ async def browser_login() -> Credential:
     if not cred:
         raise RuntimeError("浏览器登录失败，请确保已安装selenium和webdriver-manager")
 
-    validation = _validate_credential(cred, require_write=True)
+    validation = await _validate_credential_async(cred, require_write=True)
     if validation is True:
+        save_credential(cred)
         print("\n✅ 登录成功！凭证已保存")
         return cred
     elif validation is False:
         raise RuntimeError("Cookie验证失败，请重新登录")
     else:
+        save_credential(cred)
         print("\n✅ 登录成功（网络验证跳过）！凭证已保存")
         return cred
