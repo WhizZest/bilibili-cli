@@ -155,9 +155,15 @@ bili status --yaml             # Structured auth status
 bili whoami                    # Detailed profile info
 bili whoami --yaml              # Profile as YAML
 bili whoami --json              # Profile as JSON
-bili login                     # QR code login
+bili login                     # QR code login (default)
+bili login --method browser     # Browser login via Selenium (recommended)
+bili login --method qr         # QR code login (explicit)
 bili logout                    # Clear credentials
 ```
+
+**Login Methods**:
+- **Browser Login** (`--method browser`): Launches Chrome, prompts manual login, extracts cookies. Works with encrypted browsers and is more reliable.
+- **QR Code Login** (`--method qr` or default): Displays QR code in terminal for scanning with Bilibili app.
 
 ## Structured Output
 

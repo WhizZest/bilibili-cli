@@ -12,10 +12,19 @@ from . import common
 
 
 @click.command()
-def login():
-    """扫码登录 Bilibili。"""
+@click.option(
+    "--method",
+    type=click.Choice(["qr", "browser"], case_sensitive=False),
+    default="qr",
+    help="登录方式：qr=扫码登录（默认），browser=浏览器登录",
+)
+def login(method: str):
+    """登录 Bilibili。支持浏览器登录（--method browser）和扫码登录（--method qr）。"""
     try:
-        common.run(common.qr_login())
+        if method == "browser":
+            common.run(common.browser_login())
+        else:
+            common.run(common.qr_login())
     except RuntimeError as e:
         common.exit_error(str(e))
     except Exception as e:
