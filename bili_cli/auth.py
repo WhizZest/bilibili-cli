@@ -21,6 +21,10 @@ from typing import Literal
 import qrcode
 from bilibili_api.login_v2 import QrCodeLogin, QrCodeLoginEvents
 from bilibili_api.utils.network import Credential
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.chrome.service import Service
+from webdriver_manager.chrome import ChromeDriverManager
 
 logger = logging.getLogger(__name__)
 
@@ -292,11 +296,6 @@ def _extract_selenium_credential() -> Credential | None:
     Launches a new Chrome instance, navigates to bilibili.com,
     prompts user to login if needed, then extracts cookies.
     """
-    from selenium import webdriver
-    from selenium.webdriver.chrome.options import Options
-    from selenium.webdriver.chrome.service import Service
-    from webdriver_manager.chrome import ChromeDriverManager
-
     chrome_options = Options()
     chrome_options.add_argument("--disable-gpu")
     chrome_options.add_argument("--no-sandbox")
@@ -513,7 +512,7 @@ async def browser_login() -> Credential:
     """
     cred = _extract_selenium_credential()
     if not cred:
-        raise RuntimeError("浏览器登录失败，请确保已安装selenium和webdriver-manager")
+        raise RuntimeError("浏览器登录失败，请查看日志了解详情")
 
     validation = await _validate_credential_async(cred, require_write=True)
     if validation is True:
