@@ -296,8 +296,9 @@ def _extract_selenium_credential() -> Credential | None:
         from selenium import webdriver
         from selenium.webdriver.chrome.options import Options
         from webdriver_manager.chrome import ChromeDriverManager
-    except ImportError:
-        logger.warning("Selenium or webdriver-manager not installed, skipping")
+    except ImportError as e:
+        module_name = str(e).split("'")[1] if "'" in str(e) else "Selenium/webdriver-manager"
+        logger.warning("Failed to import %s: %s", module_name, e)
         return None
 
     try:
