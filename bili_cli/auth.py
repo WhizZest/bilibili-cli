@@ -11,7 +11,6 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-import re
 import shutil
 import subprocess
 import sys
@@ -293,23 +292,10 @@ def _extract_selenium_credential() -> Credential | None:
     Launches a new Chrome instance, navigates to bilibili.com,
     prompts user to login if needed, then extracts cookies.
     """
-    try:
-        from selenium import webdriver
-        from selenium.webdriver.chrome.options import Options
-        from webdriver_manager.chrome import ChromeDriverManager
-    except ImportError as e:
-        msg = str(e)
-        module_name = getattr(e, "name", None)
-        if not module_name:
-            m = re.search(r"No module named '([^']+)'", msg) or re.search(r"from '([^']+)'", msg)
-            module_name = m.group(1) if m else "Selenium/webdriver-manager"
-        logger.warning("Failed to import %s: %s", module_name, e)
-        return None
-
-    try:
-        from selenium.webdriver.chrome.service import Service
-    except ImportError:
-        Service = None
+    from selenium import webdriver
+    from selenium.webdriver.chrome.options import Options
+    from selenium.webdriver.chrome.service import Service
+    from webdriver_manager.chrome import ChromeDriverManager
 
     chrome_options = Options()
     chrome_options.add_argument("--disable-gpu")
@@ -318,11 +304,8 @@ def _extract_selenium_credential() -> Credential | None:
 
     logger.info("Starting Chrome for cookie extraction...")
     try:
-        if Service:
-            service = Service(ChromeDriverManager().install())
-            driver = webdriver.Chrome(service=service, options=chrome_options)
-        else:
-            driver = webdriver.Chrome(options=chrome_options)
+        service = Service(ChromeDriverManager().install())
+        driver = webdriver.Chrome(service=service, options=chrome_options)
     except Exception as e:
         logger.warning("Failed to start Chrome: %s", e)
         return None
